@@ -6,7 +6,7 @@ CONFIG_FILE="${VPN_SPLIT_CONFIG:-$SCRIPT_DIR/vpn.env}"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
   echo "VPN is not configured yet." >&2
-  echo "Run: vpn update-config /path/to/wireguard.conf" >&2
+  echo "Run: vpnp update-config /path/to/wireguard.conf" >&2
   return 2 2>/dev/null || exit 2
 fi
 
@@ -56,7 +56,7 @@ check_proxy() {
       fi
 
       echo "Warning: VPN proxy is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" >&2
-      echo "Run: vpn up" >&2
+      echo "Run: vpnp up" >&2
       if [[ "${STRICT_PROXY_CHECK:-0}" == "1" ]]; then
         return 3
       fi

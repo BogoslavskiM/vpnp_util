@@ -18,8 +18,8 @@ vpn-ip() {
   "$_vpn_dir/check-ip.sh"
 }
 
-vpn-env() {
-  source "$_vpn_dir/vpn-env.sh"
+vpn-shell() {
+  "$_vpn_dir/vpnp" shell
 }
 
 vpn-log() {
@@ -47,21 +47,21 @@ VPN commands:
   vpn-down     stop local VPN/SOCKS proxy
   vpn-status   show proxy status
   vpn-ip       show direct/proxy IP check
-  vpn-env      enable proxy env in current terminal
+  vpn-shell    open a terminal shell through VPN proxy
 
   vpn-log      tail sing-box log, default 80 lines
   vpn-yandex   open Yandex via VPN routing
   vpn-google   open Google Chrome via VPN routing
-  vpn update-config copy WireGuard config into this project
-  vpn uninstall remove global vpn command
+  vpnp update-config copy WireGuard config into this project
+  vpnp uninstall remove global vpnp command
 
 Examples:
   vpn-yandex
   vpn-google
   vpn-yandex <url>
   vpn-google <url>
-  vpn-env
-  vpn update-config ~/Downloads/work-vpn.conf
-  vpn uninstall
+  vpn-shell
+  vpnp update-config ~/Downloads/work-vpn.conf
+  vpnp uninstall
 EOF
 }

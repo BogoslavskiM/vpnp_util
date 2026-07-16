@@ -61,7 +61,7 @@ check_proxy
 
 if command -v pgrep >/dev/null 2>&1 && pgrep -x "Google Chrome" >/dev/null 2>&1; then
   echo "Google Chrome is already running." >&2
-  echo "Quit Chrome first, then run: vpn google" >&2
+  echo "Quit Chrome first, then run: vpnp google" >&2
   exit 6
 fi
 

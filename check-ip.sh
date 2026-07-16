@@ -7,7 +7,7 @@ source "$SCRIPT_DIR/common.sh"
 
 if [[ -z "$IP_CHECK_URL" ]]; then
   echo "IP check is not configured." >&2
-  echo "Set IP_CHECK_URL in vpn.env, then run: vpn ip" >&2
+  echo "Set IP_CHECK_URL in vpn.env, then run: vpnp ip" >&2
   exit 2
 fi
 

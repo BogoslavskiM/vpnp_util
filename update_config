@@ -9,8 +9,8 @@ TARGET_CONFIG="$CONFIG_DIR/current.conf"
 usage() {
   cat >&2 <<'EOF'
 Usage:
-  vpn update-config /path/to/wireguard.conf
-  vpn update-config /path/to/directory-with-wireguard-conf/
+  vpnp update-config /path/to/wireguard.conf
+  vpnp update-config /path/to/directory-with-wireguard-conf/
 EOF
 }
 
@@ -135,4 +135,4 @@ fi
 set_env_value "WG_CONFIG_PATH" "\$SCRIPT_DIR/configs/current.conf"
 
 echo "VPN config updated."
-echo "You can now run: vpn up"
+echo "You can now run: vpnp up"

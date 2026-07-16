@@ -10,7 +10,7 @@ mkdir -p "$(dirname "$SING_BOX_LAUNCH_PLIST")"
 
 if ! command -v sing-box >/dev/null 2>&1; then
   echo "sing-box is not installed." >&2
-  echo "Install sing-box first, then run: vpn up" >&2
+  echo "Install sing-box first, then run: vpnp up" >&2
   exit 9
 fi
 
