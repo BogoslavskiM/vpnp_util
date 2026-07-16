@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_PATH="$SCRIPT_DIR/vpn"
+
+choose_bin_dir() {
+  if [[ -n "${VPN_INSTALL_BIN_DIR:-}" ]]; then
+    printf '%s\n' "$VPN_INSTALL_BIN_DIR"
+    return 0
+  fi
+
+  local candidate
+  for candidate in "/usr/local/bin" "/opt/homebrew/bin" "$HOME/.local/bin" "$HOME/bin"; do
+    case ":$PATH:" in
+      *":$candidate:"*)
+        printf '%s\n' "$candidate"
+        return 0
+        ;;
+    esac
+  done
+
+  printf '%s\n' "$HOME/.local/bin"
+}
+
+BIN_DIR="$(choose_bin_dir)"
+LINK_PATH="$BIN_DIR/vpn"
+
+if [[ ! -x "$TARGET_PATH" ]]; then
+  echo "CLI is not executable: $TARGET_PATH" >&2
+  echo "Run: chmod +x \"$TARGET_PATH\"" >&2
+  exit 1
+fi
+
+mkdir -p "$BIN_DIR"
+if ! ln -sfn "$TARGET_PATH" "$LINK_PATH" 2>/dev/null; then
+  echo "Could not install symlink:" >&2
+  echo "  $LINK_PATH -> $TARGET_PATH" >&2
+  echo >&2
+  echo "Try a writable global bin directory:" >&2
+  echo "  VPN_INSTALL_BIN_DIR=\"\$HOME/.local/bin\" ./install" >&2
+  echo >&2
+  echo "Or install into /usr/local/bin with elevated permissions:" >&2
+  echo "  sudo VPN_INSTALL_BIN_DIR=/usr/local/bin ./install" >&2
+  exit 2
+fi
+
+echo "Installed vpn CLI:"
+echo "  $LINK_PATH -> $TARGET_PATH"
+
+case ":$PATH:" in
+  *":$BIN_DIR:"*)
+    echo "PATH already contains: $BIN_DIR"
+    echo "Try: vpn help"
+    ;;
+  *)
+    echo
+    echo "Add this directory to PATH to use vpn globally:"
+    echo "  $BIN_DIR"
+    echo
+    echo "For this terminal session:"
+    echo "  export PATH=\"$BIN_DIR:\$PATH\""
+    echo
+    echo "Then try:"
+    echo "  vpn help"
+    ;;
+esac

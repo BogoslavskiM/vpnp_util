@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SOURCE_PATH="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE_PATH" ]]; do
+  SOURCE_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+  LINK_TARGET="$(readlink "$SOURCE_PATH")"
+  if [[ "$LINK_TARGET" == /* ]]; then
+    SOURCE_PATH="$LINK_TARGET"
+  else
+    SOURCE_PATH="$SOURCE_DIR/$LINK_TARGET"
+  fi
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  vpn up
+  vpn down
+  vpn status
+  vpn ip
+  vpn log [lines]
+  vpn google [browser-args...]
+  vpn yandex [browser-args...]
+  vpn update-config /path/to/wireguard.conf
+  vpn help
+EOF
+}
+
+if [[ "$#" -eq 0 ]]; then
+  usage
+  exit 0
+fi
+
+command="$1"
+shift
+
+case "$command" in
+  up)
+    exec "$SCRIPT_DIR/start-work-vpn-proxy.sh" "$@"
+    ;;
+  down)
+    exec "$SCRIPT_DIR/stop-work-vpn-proxy.sh" "$@"
+    ;;
+  status)
+    exec "$SCRIPT_DIR/status-work-vpn-proxy.sh" "$@"
+    ;;
+  ip)
+    exec "$SCRIPT_DIR/check-ip.sh" "$@"
+    ;;
+  log)
+    lines="${1:-80}"
+    exec tail -n "$lines" "$SCRIPT_DIR/runtime/sing-box-work.log"
+    ;;
+  google)
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    exec "$SCRIPT_DIR/google-vpn.sh" "$@"
+    ;;
+  yandex)
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    exec "$SCRIPT_DIR/yandex-vpn.sh" "$@"
+    ;;
+  update-config|update_config)
+    exec "$SCRIPT_DIR/update_config" "$@"
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $command" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
