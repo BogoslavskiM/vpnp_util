@@ -31,6 +31,11 @@ vpn-yandex() {
   "$_vpn_dir/yandex-vpn.sh" "$@"
 }
 
+vpn-google() {
+  "$_vpn_dir/start-work-vpn-proxy.sh" >/dev/null
+  "$_vpn_dir/google-vpn.sh" "$@"
+}
+
 update_config() {
   "$_vpn_dir/update_config" "$@"
 }
@@ -46,11 +51,14 @@ VPN commands:
 
   vpn-log      tail sing-box log, default 80 lines
   vpn-yandex   open Yandex via VPN routing
+  vpn-google   open Google Chrome via VPN routing
   update_config copy WireGuard config into this project
 
 Examples:
   vpn-yandex
+  vpn-google
   vpn-yandex <url>
+  vpn-google <url>
   vpn-env
   update_config ~/Downloads/work-vpn.conf
 EOF

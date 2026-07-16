@@ -16,8 +16,13 @@ if ! command -v sing-box >/dev/null 2>&1; then
 fi
 
 if launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
-  echo "Work VPN proxy is already loaded: $SING_BOX_LAUNCH_LABEL"
-  exit 0
+  if command -v nc >/dev/null 2>&1 && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
+    echo "Work VPN proxy is already loaded: $SING_BOX_LAUNCH_LABEL"
+    exit 0
+  fi
+
+  echo "Work VPN proxy is loaded but port ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} is not reachable; restarting it."
+  launchctl bootout "gui/$(id -u)" "$SING_BOX_LAUNCH_PLIST" >/dev/null 2>&1 || true
 fi
 
 if command -v nc >/dev/null 2>&1 && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
@@ -77,6 +82,12 @@ if ! launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
   echo "sing-box failed to start. Log:" >&2
   tail -n 80 "$SING_BOX_LOG_PATH" >&2 || true
   exit 11
+fi
+
+if command -v nc >/dev/null 2>&1 && ! nc -z -w 2 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
+  echo "sing-box started but proxy port is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}. Log:" >&2
+  tail -n 80 "$SING_BOX_LOG_PATH" >&2 || true
+  exit 12
 fi
 
 echo "Work VPN SOCKS proxy started:"

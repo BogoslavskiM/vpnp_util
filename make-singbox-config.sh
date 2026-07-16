@@ -140,6 +140,10 @@ WORK_DNS_SERVER="${SING_BOX_WORK_DNS_SERVER:-$(first_csv_item "$WG_DNS")}"
 if [[ -z "$WORK_DNS_SERVER" ]]; then
   WORK_DNS_SERVER="$SING_BOX_BOOTSTRAP_DNS_SERVER"
 fi
+DEFAULT_DNS_TAG="bootstrap-dns"
+if [[ "$YANDEX_ROUTE_MODE" == "full" ]]; then
+  DEFAULT_DNS_TAG="work-dns"
+fi
 
 umask 077
 {
@@ -183,11 +187,11 @@ JSON
   cat <<JSON
       {
         "action": "route",
-        "server": "bootstrap-dns",
+        "server": "$DEFAULT_DNS_TAG",
         "strategy": "ipv4_only"
       }
     ],
-    "final": "bootstrap-dns"
+    "final": "$DEFAULT_DNS_TAG"
   },
   "inbounds": [
     {
@@ -237,7 +241,7 @@ JSON
     }
   ],
   "route": {
-    "default_domain_resolver": "bootstrap-dns",
+    "default_domain_resolver": "$DEFAULT_DNS_TAG",
     "rules": [
 JSON
 
