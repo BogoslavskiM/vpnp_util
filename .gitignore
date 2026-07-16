@@ -1,0 +1,6 @@
+runtime/
+configs/
+vpn.env
+*.log
+*.pid
+.DS_Store

@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${VPN_SPLIT_CONFIG:-$SCRIPT_DIR/vpn.env}"
+CONFIG_DIR="$SCRIPT_DIR/configs"
+TARGET_CONFIG="$CONFIG_DIR/current.conf"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  update_config /path/to/wireguard.conf
+  update_config /path/to/directory-with-wireguard-conf/
+EOF
+}
+
+find_config_file() {
+  local input="$1"
+
+  if [[ -f "$input" ]]; then
+    printf '%s\n' "$input"
+    return 0
+  fi
+
+  if [[ ! -d "$input" ]]; then
+    echo "Config path does not exist: $input" >&2
+    return 1
+  fi
+
+  local found=()
+  local candidate
+  while IFS= read -r -d '' candidate; do
+    found+=("$candidate")
+  done < <(
+    find "$input" -maxdepth 1 -type f \
+      \( -name '*.conf' -o -name '*.wg' -o -name '*.vpn' \) \
+      -print0
+  )
+
+  if [[ "${#found[@]}" -eq 0 ]]; then
+    echo "No WireGuard config found in directory: $input" >&2
+    echo "Expected one of: *.conf, *.wg, *.vpn" >&2
+    return 1
+  fi
+
+  if [[ "${#found[@]}" -gt 1 ]]; then
+    echo "More than one config found in directory: $input" >&2
+    printf '  %s\n' "${found[@]}" >&2
+    echo "Pass the exact config file path instead." >&2
+    return 1
+  fi
+
+  printf '%s\n' "${found[0]}"
+}
+
+validate_wireguard_config() {
+  local file="$1"
+
+  if ! grep -Eq '^[[:space:]]*\[Interface\][[:space:]]*$' "$file"; then
+    echo "Config does not contain [Interface]: $file" >&2
+    return 1
+  fi
+
+  if ! grep -Eq '^[[:space:]]*\[Peer\][[:space:]]*$' "$file"; then
+    echo "Config does not contain [Peer]: $file" >&2
+    return 1
+  fi
+}
+
+abs_path() {
+  local path="$1"
+  local dir
+  local base
+  dir="$(cd "$(dirname "$path")" && pwd -P)"
+  base="$(basename "$path")"
+  printf '%s/%s\n' "$dir" "$base"
+}
+
+quote_env_value() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"\n' "$value"
+}
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  local quoted
+  local tmp
+  quoted="$(quote_env_value "$value")"
+  tmp="$(mktemp "$CONFIG_FILE.tmp.XXXXXX")"
+
+  if [[ -f "$CONFIG_FILE" ]] && grep -Eq "^${key}=" "$CONFIG_FILE"; then
+    awk -v key="$key" -v quoted="$quoted" '
+      BEGIN { replaced = 0 }
+      $0 ~ "^" key "=" {
+        print key "=" quoted
+        replaced = 1
+        next
+      }
+      { print }
+      END {
+        if (!replaced) {
+          print key "=" quoted
+        }
+      }
+    ' "$CONFIG_FILE" > "$tmp"
+  else
+    if [[ -f "$CONFIG_FILE" ]]; then
+      cp "$CONFIG_FILE" "$tmp"
+      printf '\n%s=%s\n' "$key" "$quoted" >> "$tmp"
+    else
+      printf '%s=%s\n' "$key" "$quoted" > "$tmp"
+    fi
+  fi
+
+  mv "$tmp" "$CONFIG_FILE"
+}
+
+if [[ "$#" -ne 1 ]]; then
+  usage
+  exit 2
+fi
+
+source_config="$(find_config_file "$1")"
+validate_wireguard_config "$source_config"
+
+mkdir -p "$CONFIG_DIR"
+if [[ "$(abs_path "$source_config")" != "$(abs_path "$TARGET_CONFIG")" ]]; then
+  install -m 600 "$source_config" "$TARGET_CONFIG"
+else
+  chmod 600 "$TARGET_CONFIG"
+fi
+set_env_value "WG_CONFIG_PATH" "\$SCRIPT_DIR/configs/current.conf"
+
+echo "VPN config updated:"
+echo "  source: $source_config"
+echo "  stored: $TARGET_CONFIG"
+echo "  env: $CONFIG_FILE"
