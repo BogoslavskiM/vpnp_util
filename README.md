@@ -12,8 +12,6 @@
 cd vpnp_util
 ./install
 vpnp update-config /path/to/wireguard.conf
-vpnp up
-vpnp status
 ```
 
 После этого можно запускать браузер или терминал через VPN-прокси:
