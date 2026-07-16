@@ -53,6 +53,7 @@ VPN commands:
   vpn-yandex   open Yandex via VPN routing
   vpn-google   open Google Chrome via VPN routing
   vpn update-config copy WireGuard config into this project
+  vpn uninstall remove global vpn command
 
 Examples:
   vpn-yandex
@@ -61,5 +62,6 @@ Examples:
   vpn-google <url>
   vpn-env
   vpn update-config ~/Downloads/work-vpn.conf
+  vpn uninstall
 EOF
 }

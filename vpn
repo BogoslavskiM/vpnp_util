@@ -25,8 +25,51 @@ Usage:
   vpn google [browser-args...]
   vpn yandex [browser-args...]
   vpn update-config /path/to/wireguard.conf
+  vpn uninstall
   vpn help
 EOF
+}
+
+uninstall_global_command() {
+  target="$SCRIPT_DIR/vpn"
+  removed=0
+  seen_dirs=":"
+
+  candidate_dirs=()
+  IFS=":" read -r -a path_dirs <<< "$PATH"
+  for dir in "${path_dirs[@]}" "/usr/local/bin" "/opt/homebrew/bin" "$HOME/.local/bin" "$HOME/bin"; do
+    [[ -z "$dir" ]] && continue
+    case "$seen_dirs" in
+      *":$dir:"*) continue ;;
+    esac
+    seen_dirs="${seen_dirs}${dir}:"
+    candidate_dirs+=("$dir")
+  done
+
+  for dir in "${candidate_dirs[@]}"; do
+    link="$dir/vpn"
+    [[ -L "$link" ]] || continue
+
+    link_target="$(readlink "$link")"
+    if [[ "$link_target" != /* ]]; then
+      link_target="$(cd -P "$dir" && cd -P "$(dirname "$link_target")" && pwd)/$(basename "$link_target")"
+    fi
+
+    if [[ "$link_target" == "$target" ]]; then
+      if rm "$link" 2>/dev/null; then
+        echo "Global vpn command removed."
+        removed=1
+      else
+        echo "Could not remove the global vpn command." >&2
+        echo "Try: sudo rm \"$link\"" >&2
+        exit 1
+      fi
+    fi
+  done
+
+  if [[ "$removed" -eq 0 ]]; then
+    echo "No global vpn command for this project was found."
+  fi
 }
 
 if [[ "$#" -eq 0 ]]; then
@@ -91,6 +134,9 @@ case "$command" in
     ;;
   update-config|update_config)
     exec "$SCRIPT_DIR/update_config" "$@"
+    ;;
+  uninstall)
+    uninstall_global_command
     ;;
   help|-h|--help)
     usage
