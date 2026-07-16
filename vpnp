@@ -32,6 +32,7 @@ EOF
 
 uninstall_global_command() {
   target="$SCRIPT_DIR/vpnp"
+  completion_target="$SCRIPT_DIR/_vpnp"
   removed=0
   seen_dirs=":"
 
@@ -47,6 +48,17 @@ uninstall_global_command() {
   done
 
   for dir in "${candidate_dirs[@]}"; do
+
+    completion_link="$dir/_vpnp"
+    if [[ -L "$completion_link" ]]; then
+      completion_link_target="$(readlink "$completion_link")"
+      if [[ "$completion_link_target" != /* ]]; then
+        completion_link_target="$(cd -P "$dir" && cd -P "$(dirname "$completion_link_target")" && pwd)/$(basename "$completion_link_target")"
+      fi
+      if [[ "$completion_link_target" == "$completion_target" ]]; then
+        rm "$completion_link" 2>/dev/null || true
+      fi
+    fi
     link="$dir/vpnp"
     [[ -L "$link" ]] || continue
 
@@ -64,6 +76,20 @@ uninstall_global_command() {
         echo "Try: sudo rm \"$link\"" >&2
         exit 1
       fi
+    fi
+  done
+
+  for dir in "/usr/local/share/zsh/site-functions" "/opt/homebrew/share/zsh/site-functions" "$HOME/.zsh/completions"; do
+    completion_link="$dir/_vpnp"
+    [[ -L "$completion_link" ]] || continue
+
+    completion_link_target="$(readlink "$completion_link")"
+    if [[ "$completion_link_target" != /* ]]; then
+      completion_link_target="$(cd -P "$dir" && cd -P "$(dirname "$completion_link_target")" && pwd)/$(basename "$completion_link_target")"
+    fi
+
+    if [[ "$completion_link_target" == "$completion_target" ]]; then
+      rm "$completion_link" 2>/dev/null || true
     fi
   done
 

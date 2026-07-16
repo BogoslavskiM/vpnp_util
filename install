@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_PATH="$SCRIPT_DIR/vpnp"
+COMPLETION_TARGET="$SCRIPT_DIR/_vpnp"
 
 choose_bin_dir() {
   if [[ -n "${VPN_INSTALL_BIN_DIR:-}" ]]; then
@@ -23,9 +24,29 @@ choose_bin_dir() {
   printf '%s\n' "$HOME/.local/bin"
 }
 
+
+choose_completion_dir() {
+  if [[ -n "${VPN_INSTALL_COMPLETION_DIR:-}" ]]; then
+    printf '%s\n' "$VPN_INSTALL_COMPLETION_DIR"
+    return 0
+  fi
+
+  local candidate
+  for candidate in "/usr/local/share/zsh/site-functions" "/opt/homebrew/share/zsh/site-functions" "$HOME/.zsh/completions"; do
+    if [[ -d "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '%s\n' "$HOME/.zsh/completions"
+}
+
 BIN_DIR="$(choose_bin_dir)"
 LINK_PATH="$BIN_DIR/vpnp"
 LEGACY_LINK_PATH="$BIN_DIR/vpn"
+COMPLETION_DIR="$(choose_completion_dir)"
+COMPLETION_LINK="$COMPLETION_DIR/_vpnp"
 
 if [[ ! -x "$TARGET_PATH" ]]; then
   echo "vpnp command is not executable." >&2
@@ -51,7 +72,18 @@ if [[ -L "$LEGACY_LINK_PATH" ]]; then
   fi
 fi
 
+mkdir -p "$COMPLETION_DIR"
+if [[ -f "$COMPLETION_TARGET" ]]; then
+  if ln -sfn "$COMPLETION_TARGET" "$COMPLETION_LINK" 2>/dev/null; then
+    echo "Shell completions installed."
+  else
+    echo "Could not install shell completions." >&2
+    echo "Try: sudo VPN_INSTALL_COMPLETION_DIR=$COMPLETION_DIR ./install" >&2
+  fi
+fi
+
 echo "Global vpnp command installed."
+echo "If Tab still shows files, restart the terminal or run: autoload -Uz compinit; compinit"
 
 case ":$PATH:" in
   *":$BIN_DIR:"*)
