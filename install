@@ -27,16 +27,14 @@ BIN_DIR="$(choose_bin_dir)"
 LINK_PATH="$BIN_DIR/vpn"
 
 if [[ ! -x "$TARGET_PATH" ]]; then
-  echo "CLI is not executable: $TARGET_PATH" >&2
-  echo "Run: chmod +x \"$TARGET_PATH\"" >&2
+  echo "vpn command is not executable." >&2
+  echo "Run: chmod +x vpn" >&2
   exit 1
 fi
 
 mkdir -p "$BIN_DIR"
 if ! ln -sfn "$TARGET_PATH" "$LINK_PATH" 2>/dev/null; then
-  echo "Could not install symlink:" >&2
-  echo "  $LINK_PATH -> $TARGET_PATH" >&2
-  echo >&2
+  echo "Could not install the global vpn command." >&2
   echo "Try a writable global bin directory:" >&2
   echo "  VPN_INSTALL_BIN_DIR=\"\$HOME/.local/bin\" ./install" >&2
   echo >&2
@@ -45,20 +43,15 @@ if ! ln -sfn "$TARGET_PATH" "$LINK_PATH" 2>/dev/null; then
   exit 2
 fi
 
-echo "Installed vpn CLI:"
-echo "  $LINK_PATH -> $TARGET_PATH"
+echo "Global vpn command installed."
 
 case ":$PATH:" in
   *":$BIN_DIR:"*)
-    echo "PATH already contains: $BIN_DIR"
     echo "Try: vpn help"
     ;;
   *)
     echo
-    echo "Add this directory to PATH to use vpn globally:"
-    echo "  $BIN_DIR"
-    echo
-    echo "For this terminal session:"
+    echo "Add the install directory to PATH for this terminal session:"
     echo "  export PATH=\"$BIN_DIR:\$PATH\""
     echo
     echo "Then try:"

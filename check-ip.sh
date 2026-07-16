@@ -6,15 +6,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
 if [[ -z "$IP_CHECK_URL" ]]; then
-  echo "IP_CHECK_URL is not configured in $CONFIG_FILE" >&2
+  echo "IP check is not configured." >&2
+  echo "Set IP_CHECK_URL in vpn.env, then run: vpn ip" >&2
   exit 2
 fi
 
-echo "Direct IP:"
+echo "Direct connection:"
 curl -fsS "$IP_CHECK_URL" || true
 echo
 echo
 
-echo "Proxy/VPN IP:"
+echo "VPN proxy connection:"
 curl -fsS --proxy "$VPN_TERMINAL_PROXY_URL" "$IP_CHECK_URL"
 echo

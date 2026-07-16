@@ -64,14 +64,13 @@ check_proxy
 YANDEX_APP="$(find_yandex_app || true)"
 if [[ -z "$YANDEX_APP" ]]; then
   echo "Yandex Browser app was not found." >&2
-  echo "Set YANDEX_APP_PATH in $CONFIG_FILE, for example:" >&2
-  echo '  YANDEX_APP_PATH="/Applications/Yandex.app"' >&2
+  echo "Set YANDEX_APP_PATH in vpn.env if Yandex Browser is installed elsewhere." >&2
   exit 4
 fi
 
 YANDEX_BIN="$(find_yandex_binary "$YANDEX_APP" || true)"
 if [[ -z "$YANDEX_BIN" ]]; then
-  echo "Yandex executable was not found inside: $YANDEX_APP" >&2
+  echo "Yandex Browser executable was not found." >&2
   exit 5
 fi
 
@@ -87,7 +86,5 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/yandex-vpn.log" 2>&1 &
 
-echo "Yandex started through $VPN_BROWSER_PROXY"
-echo "  app: $YANDEX_APP"
-echo "  profile: default Yandex profile"
-echo "  log: $SCRIPT_DIR/runtime/yandex-vpn.log"
+echo "Yandex Browser started through VPN proxy."
+echo "Profile: default Yandex profile"

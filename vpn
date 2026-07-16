@@ -20,6 +20,7 @@ Usage:
   vpn down
   vpn status
   vpn ip
+  eval "$(vpn env)"
   vpn log [lines]
   vpn google [browser-args...]
   vpn yandex [browser-args...]
@@ -48,6 +49,33 @@ case "$command" in
     ;;
   ip)
     exec "$SCRIPT_DIR/check-ip.sh" "$@"
+    ;;
+  env)
+    CONFIG_FILE="${VPN_SPLIT_CONFIG:-$SCRIPT_DIR/vpn.env}"
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+      echo "VPN is not configured yet. Run: vpn update-config /path/to/wireguard.conf" >&2
+      exit 2
+    fi
+
+    # shellcheck source=/dev/null
+    source "$CONFIG_FILE"
+
+    : "${VPN_PROXY_SCHEME:=socks5}"
+    : "${VPN_PROXY_HOST:=127.0.0.1}"
+    : "${VPN_PROXY_PORT:=1080}"
+    : "${VPN_TERMINAL_PROXY_URL:=socks5h://${VPN_PROXY_HOST}:${VPN_PROXY_PORT}}"
+    : "${NO_PROXY:=localhost,127.0.0.1,::1,.local}"
+
+    printf 'export VPN_MODE=%q\n' "1"
+    printf 'export ALL_PROXY=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export all_proxy=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export HTTPS_PROXY=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export https_proxy=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export HTTP_PROXY=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export http_proxy=%q\n' "$VPN_TERMINAL_PROXY_URL"
+    printf 'export NO_PROXY=%q\n' "$NO_PROXY"
+    printf 'export no_proxy=%q\n' "$NO_PROXY"
+    printf 'export GIT_SSH_COMMAND=%q\n' "ssh -o ProxyCommand='nc -x ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} -X 5 %h %p'"
     ;;
   log)
     lines="${1:-80}"

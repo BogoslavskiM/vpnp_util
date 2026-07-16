@@ -52,7 +52,7 @@ VPN commands:
   vpn-log      tail sing-box log, default 80 lines
   vpn-yandex   open Yandex via VPN routing
   vpn-google   open Google Chrome via VPN routing
-  update_config copy WireGuard config into this project
+  vpn update-config copy WireGuard config into this project
 
 Examples:
   vpn-yandex
@@ -60,6 +60,6 @@ Examples:
   vpn-yandex <url>
   vpn-google <url>
   vpn-env
-  update_config ~/Downloads/work-vpn.conf
+  vpn update-config ~/Downloads/work-vpn.conf
 EOF
 }

@@ -61,21 +61,20 @@ check_proxy
 
 if command -v pgrep >/dev/null 2>&1 && pgrep -x "Google Chrome" >/dev/null 2>&1; then
   echo "Google Chrome is already running." >&2
-  echo "Quit Chrome first, then run vpn-google again so proxy flags apply to the profile picker." >&2
+  echo "Quit Chrome first, then run: vpn google" >&2
   exit 6
 fi
 
 CHROME_APP="$(find_chrome_app || true)"
 if [[ -z "$CHROME_APP" ]]; then
   echo "Google Chrome app was not found." >&2
-  echo "Set CHROME_APP_PATH in $CONFIG_FILE, for example:" >&2
-  echo '  CHROME_APP_PATH="/Applications/Google Chrome.app"' >&2
+  echo "Set CHROME_APP_PATH in vpn.env if Chrome is installed elsewhere." >&2
   exit 4
 fi
 
 CHROME_BIN="$(find_app_binary "$CHROME_APP" || true)"
 if [[ -z "$CHROME_BIN" ]]; then
-  echo "Google Chrome executable was not found inside: $CHROME_APP" >&2
+  echo "Google Chrome executable was not found." >&2
   exit 5
 fi
 
@@ -91,7 +90,5 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/google-vpn.log" 2>&1 &
 
-echo "Google Chrome started through $VPN_BROWSER_PROXY"
-echo "  app: $CHROME_APP"
-echo "  profile: default Chrome profile"
-echo "  log: $SCRIPT_DIR/runtime/google-vpn.log"
+echo "Google Chrome started through VPN proxy."
+echo "Profile: default Chrome profile picker"

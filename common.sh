@@ -5,9 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${VPN_SPLIT_CONFIG:-$SCRIPT_DIR/vpn.env}"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Config not found: $CONFIG_FILE" >&2
-  echo "Create it first:" >&2
-  echo "  \"$SCRIPT_DIR/update_config\" /path/to/wireguard.conf" >&2
+  echo "VPN is not configured yet." >&2
+  echo "Run: vpn update-config /path/to/wireguard.conf" >&2
   return 2 2>/dev/null || exit 2
 fi
 
@@ -56,8 +55,8 @@ check_proxy() {
         return 0
       fi
 
-      echo "Warning: proxy check could not confirm ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" >&2
-      echo "If the app cannot connect, run: $SCRIPT_DIR/start-work-vpn-proxy.sh" >&2
+      echo "Warning: VPN proxy is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" >&2
+      echo "Run: vpn up" >&2
       if [[ "${STRICT_PROXY_CHECK:-0}" == "1" ]]; then
         return 3
       fi

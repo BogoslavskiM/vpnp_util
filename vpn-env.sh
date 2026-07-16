@@ -3,15 +3,13 @@
 if [[ -n "${BASH_VERSION:-}" ]]; then
   _vpn_env_script="${BASH_SOURCE[0]}"
   if [[ "$_vpn_env_script" == "$0" ]]; then
-    echo "Run this script with source, so variables stay in your current shell:" >&2
-    echo "  source \"$(cd "$(dirname "$_vpn_env_script")" && pwd)/vpn-env.sh\"" >&2
+    echo "Run: eval \"\$(vpn env)\"" >&2
     exit 2
   fi
 elif [[ -n "${ZSH_VERSION:-}" ]]; then
   _vpn_env_script="${(%):-%x}"
   if [[ "$ZSH_EVAL_CONTEXT" != *:file* ]]; then
-    echo "Run this script with source, so variables stay in your current shell:" >&2
-    echo "  source ~/vpn-app-split/vpn-env.sh" >&2
+    echo "Run: eval \"\$(vpn env)\"" >&2
     exit 2
   fi
 else
@@ -22,7 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "$_vpn_env_script")" && pwd)"
 CONFIG_FILE="${VPN_SPLIT_CONFIG:-$SCRIPT_DIR/vpn.env}"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Config not found: $CONFIG_FILE" >&2
+  echo "VPN is not configured yet." >&2
+  echo "Run: vpn update-config /path/to/wireguard.conf" >&2
   return 2 2>/dev/null || exit 2
 fi
 
@@ -37,8 +36,8 @@ source "$CONFIG_FILE"
 
 if command -v nc >/dev/null 2>&1; then
   if ! nc -z -w 2 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
-    echo "Warning: proxy port check failed for ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" >&2
-    echo "Run first: ~/vpn-app-split/start-work-vpn-proxy.sh" >&2
+    echo "Warning: VPN proxy is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" >&2
+    echo "Run first: vpn up" >&2
   fi
 fi
 
@@ -53,7 +52,4 @@ export NO_PROXY
 export no_proxy="$NO_PROXY"
 export GIT_SSH_COMMAND="ssh -o ProxyCommand='nc -x ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} -X 5 %h %p'"
 
-echo "VPN proxy environment enabled for this shell:"
-echo "  ALL_PROXY=$ALL_PROXY"
-echo "  NO_PROXY=$NO_PROXY"
-echo "  GIT_SSH_COMMAND=$GIT_SSH_COMMAND"
+echo "VPN environment enabled for this shell."

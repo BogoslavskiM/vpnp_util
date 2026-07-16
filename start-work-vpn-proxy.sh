@@ -10,24 +10,23 @@ mkdir -p "$(dirname "$SING_BOX_LAUNCH_PLIST")"
 
 if ! command -v sing-box >/dev/null 2>&1; then
   echo "sing-box is not installed." >&2
-  echo "Install it first:" >&2
-  echo "  brew install sing-box" >&2
+  echo "Install sing-box first, then run: vpn up" >&2
   exit 9
 fi
 
 if launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
   if command -v nc >/dev/null 2>&1 && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
-    echo "Work VPN proxy is already loaded: $SING_BOX_LAUNCH_LABEL"
+    echo "VPN proxy is already running."
     exit 0
   fi
 
-  echo "Work VPN proxy is loaded but port ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} is not reachable; restarting it."
+  echo "VPN proxy looks stuck. Restarting it."
   launchctl bootout "gui/$(id -u)" "$SING_BOX_LAUNCH_PLIST" >/dev/null 2>&1 || true
 fi
 
 if command -v nc >/dev/null 2>&1 && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
   echo "Port ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} is already in use." >&2
-  echo "Stop the process using it, or change VPN_PROXY_PORT in $CONFIG_FILE." >&2
+  echo "Stop the process using it, or change VPN_PROXY_PORT in vpn.env." >&2
   exit 10
 fi
 
@@ -79,18 +78,17 @@ launchctl bootstrap "gui/$(id -u)" "$SING_BOX_LAUNCH_PLIST"
 sleep 2
 
 if ! launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
-  echo "sing-box failed to start. Log:" >&2
+  echo "VPN proxy failed to start. Recent log:" >&2
   tail -n 80 "$SING_BOX_LOG_PATH" >&2 || true
   exit 11
 fi
 
 if command -v nc >/dev/null 2>&1 && ! nc -z -w 2 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1; then
-  echo "sing-box started but proxy port is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}. Log:" >&2
+  echo "VPN proxy started, but the local SOCKS port is not reachable at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}." >&2
+  echo "Recent log:" >&2
   tail -n 80 "$SING_BOX_LOG_PATH" >&2 || true
   exit 12
 fi
 
-echo "Work VPN SOCKS proxy started:"
-echo "  label: $SING_BOX_LAUNCH_LABEL"
-echo "  proxy: ${VPN_PROXY_SCHEME}://${VPN_PROXY_HOST}:${VPN_PROXY_PORT}"
-echo "  log: $SING_BOX_LOG_PATH"
+echo "VPN proxy started."
+echo "SOCKS proxy: ${VPN_PROXY_SCHEME}://${VPN_PROXY_HOST}:${VPN_PROXY_PORT}"
