@@ -24,6 +24,7 @@ Usage:
   vpnp log [lines]
   vpnp google [browser-args...]
   vpnp yandex [browser-args...]
+  vpnp matlab [matlab-args...]
   vpnp update-config /path/to/wireguard.conf
   vpnp uninstall
   vpnp help
@@ -170,6 +171,10 @@ case "$command" in
   yandex)
     "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
     exec "$SCRIPT_DIR/yandex-vpn.sh" "$@"
+    ;;
+  matlab)
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    exec "$SCRIPT_DIR/matlab-vpn.sh" "$@"
     ;;
   update-config|update_config)
     exec "$SCRIPT_DIR/update_config" "$@"

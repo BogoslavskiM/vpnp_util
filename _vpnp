@@ -10,6 +10,7 @@ commands=(
   'log:показать лог sing-box'
   'google:открыть Google Chrome через VPN-прокси'
   'yandex:открыть Yandex Browser через VPN-прокси'
+  'matlab:открыть MATLAB через VPN-прокси'
   'update-config:обновить WireGuard-конфиг'
   'uninstall:удалить глобальную команду vpnp'
   'help:показать справку'
@@ -33,6 +34,9 @@ case "$state" in
         ;;
       google|yandex)
         _message 'аргументы браузера или URL'
+        ;;
+      matlab)
+        _message 'аргументы MATLAB'
         ;;
       *)
         _message 'у этой команды нет обязательных аргументов'
