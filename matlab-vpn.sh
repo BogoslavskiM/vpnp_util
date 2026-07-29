@@ -4,92 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
-
-find_matlab_app() {
-  if [[ -n "${MATLAB_APP_PATH:-}" && -d "$MATLAB_APP_PATH" ]]; then
-    printf '%s\n' "$MATLAB_APP_PATH"
-    return 0
-  fi
-
-  local candidate
-  for candidate in /Applications/MATLAB*.app "$HOME"/Applications/MATLAB*.app; do
-    if [[ -d "$candidate" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
-  if command -v mdfind >/dev/null 2>&1; then
-    while IFS= read -r candidate; do
-      if [[ -d "$candidate" ]]; then
-        printf '%s\n' "$candidate"
-        return 0
-      fi
-    done < <(mdfind "kMDItemCFBundleIdentifier == 'com.mathworks.matlab'" 2>/dev/null || true)
-  fi
-
-  return 1
-}
-
-find_matlab_binary_in_app() {
-  local app_path="$1"
-  local executable=""
-
-  if command -v plutil >/dev/null 2>&1; then
-    executable="$(plutil -extract CFBundleExecutable raw -o - "$app_path/Contents/Info.plist" 2>/dev/null || true)"
-  fi
-
-  if [[ -n "$executable" && -x "$app_path/Contents/MacOS/$executable" ]]; then
-    printf '%s\n' "$app_path/Contents/MacOS/$executable"
-    return 0
-  fi
-
-  local candidate
-  for candidate in "$app_path"/Contents/MacOS/*; do
-    if [[ -x "$candidate" && ! -d "$candidate" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-find_matlab_cli_binary_in_app() {
-  local app_path="$1"
-
-  if [[ -x "$app_path/bin/matlab" ]]; then
-    printf '%s\n' "$app_path/bin/matlab"
-    return 0
-  fi
-
-  find_matlab_binary_in_app "$app_path"
-}
-
-find_matlab_binary() {
-  if [[ -n "${MATLAB_BIN_PATH:-}" && -x "$MATLAB_BIN_PATH" ]]; then
-    printf '%s\n' "$MATLAB_BIN_PATH"
-    return 0
-  fi
-
-  local app_path
-  app_path="$(find_matlab_app || true)"
-  if [[ -n "$app_path" ]]; then
-    find_matlab_cli_binary_in_app "$app_path"
-    return $?
-  fi
-
-  if command -v matlab >/dev/null 2>&1; then
-    command -v matlab
-    return 0
-  fi
-
-  return 1
-}
-
-find_matlab_gui_app() {
-  find_matlab_app
-}
+# shellcheck source=matlab-common.sh
+source "$SCRIPT_DIR/matlab-common.sh"
 
 append_java_proxy_options() {
   if [[ "$VPN_PROXY_SCHEME" == socks* ]]; then
@@ -138,8 +54,13 @@ if [[ "$#" -eq 0 ]]; then
     echo "Set MATLAB_APP_PATH in vpn.env if MATLAB is installed elsewhere." >&2
     exit 4
   fi
-  MATLAB_PROCESS_NAME="$(basename "$(find_matlab_binary_in_app "$MATLAB_APP" || printf 'MATLAB')")"
-  MATLAB_PROCESS_COUNT_BEFORE="$(process_count "$MATLAB_PROCESS_NAME")"
+  MATLAB_EXECUTABLE="$(find_matlab_binary_in_app "$MATLAB_APP" || true)"
+  if [[ -z "$MATLAB_EXECUTABLE" ]]; then
+    echo "MATLAB app executable was not found." >&2
+    exit 4
+  fi
+  MATLAB_PROCESS_NAME="$(basename "$MATLAB_EXECUTABLE")"
+  MATLAB_PROCESS_COUNT_BEFORE="$(process_count "$MATLAB_PROCESS_NAME" "$MATLAB_EXECUTABLE")"
 
   open_env_args=(
     --env "VPN_MODE=1"
@@ -163,7 +84,8 @@ if [[ "$#" -eq 0 ]]; then
     "${open_env_args[@]}" \
     "$MATLAB_APP"
 
-  if ! wait_for_new_process_stable "$MATLAB_PROCESS_NAME" "$MATLAB_PROCESS_COUNT_BEFORE" "MATLAB"; then
+  if ! wait_for_new_process_stable \
+    "$MATLAB_PROCESS_NAME" "$MATLAB_PROCESS_COUNT_BEFORE" "MATLAB" 5 "$VPN_POLL_TIMEOUT" "$MATLAB_EXECUTABLE"; then
     echo "MATLAB did not finish launching. Recent log:" >&2
     tail -n 80 "$SCRIPT_DIR/runtime/matlab-vpn.log" >&2 || true
     exit 7

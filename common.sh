@@ -126,15 +126,18 @@ process_is_running() {
 
 process_count() {
   local process_name="$1"
+  local executable_path="${2:-}"
   local process_ids=""
   local count=0
   local pid
 
-  if command -v pgrep >/dev/null 2>&1; then
+  if [[ -n "$executable_path" ]] && command -v lsof >/dev/null 2>&1; then
+    process_ids="$(lsof -t "$executable_path" 2>/dev/null | sort -u || true)"
+  elif command -v pgrep >/dev/null 2>&1; then
     process_ids="$(pgrep -x "$process_name" 2>/dev/null || true)"
   fi
 
-  if [[ -z "$process_ids" ]] && command -v lsof >/dev/null 2>&1; then
+  if [[ -z "$process_ids" && -z "$executable_path" ]] && command -v lsof >/dev/null 2>&1; then
     process_ids="$(lsof -t -c "$process_name" -a -d cwd 2>/dev/null | sort -u || true)"
   fi
 
@@ -148,8 +151,9 @@ process_count() {
 process_count_exceeds() {
   local process_name="$1"
   local previous_count="$2"
+  local executable_path="${3:-}"
   local current_count
-  current_count="$(process_count "$process_name")"
+  current_count="$(process_count "$process_name" "$executable_path")"
   ((current_count > previous_count))
 }
 
@@ -165,12 +169,14 @@ wait_for_process() {
 wait_for_new_process() {
   local process_name="$1"
   local previous_count="$2"
+  local timeout="${3:-$VPN_POLL_TIMEOUT}"
+  local executable_path="${4:-}"
   if ! command -v pgrep >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
     return 0
   fi
 
-  poll_until "Waiting for a new $process_name process" "${3:-$VPN_POLL_TIMEOUT}" \
-    process_count_exceeds "$process_name" "$previous_count"
+  poll_until "Waiting for a new $process_name process" "$timeout" \
+    process_count_exceeds "$process_name" "$previous_count" "$executable_path"
 }
 
 wait_for_new_process_stable() {
@@ -179,18 +185,19 @@ wait_for_new_process_stable() {
   local label="${3:-$process_name}"
   local stable_seconds="${4:-5}"
   local timeout="${5:-$VPN_POLL_TIMEOUT}"
+  local executable_path="${6:-}"
   local started_at
   local now
   local elapsed
 
-  if ! wait_for_new_process "$process_name" "$previous_count" "$timeout"; then
+  if ! wait_for_new_process "$process_name" "$previous_count" "$timeout" "$executable_path"; then
     return 1
   fi
 
   started_at="$(date +%s)"
   printf 'Waiting for %s to finish launching' "$label" >&2
   while true; do
-    if ! process_count_exceeds "$process_name" "$previous_count"; then
+    if ! process_count_exceeds "$process_name" "$previous_count" "$executable_path"; then
       printf ' exited\n' >&2
       return 1
     fi

@@ -12,6 +12,8 @@ while [[ -L "$SOURCE_PATH" ]]; do
   fi
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+# shellcheck source=matlab-common.sh
+source "$SCRIPT_DIR/matlab-common.sh"
 
 usage() {
   cat <<'EOF'
@@ -117,16 +119,8 @@ load_proxy_shell_config() {
 }
 
 matlab_is_running() {
-  if command -v pgrep >/dev/null 2>&1 && pgrep -x "MATLAB" >/dev/null 2>&1; then
-    return 0
-  fi
-
-  if command -v lsof >/dev/null 2>&1; then
-    lsof -t -c "MATLAB" -a -d cwd 2>/dev/null | read -r _
-    return
-  fi
-
-  return 1
+  load_proxy_shell_config
+  matlab_gui_is_running
 }
 
 start_matlab() {
