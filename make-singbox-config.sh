@@ -275,7 +275,13 @@ JSON
     cat <<JSON
       {
         "inbound": "socks-in",
-        "ip_is_private": true,
+        "action": "resolve",
+        "server": "work-dns",
+        "strategy": "ipv4_only"
+      },
+      {
+        "inbound": "socks-in",
+        "ip_cidr": $ALLOWED_IPS_JSON,
         "action": "route",
         "outbound": "work-wg"
       },

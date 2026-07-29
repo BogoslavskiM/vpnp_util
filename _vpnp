@@ -30,7 +30,7 @@ case "$state" in
         _files
         ;;
       up)
-        _arguments '--force[перезапустить уже загруженный сервис]'
+        _message 'у этой команды нет аргументов'
         ;;
       log)
         _guard '[0-9]#' 'количество строк'
@@ -39,7 +39,9 @@ case "$state" in
         _message 'аргументы браузера или URL'
         ;;
       matlab)
-        _message 'аргументы MATLAB'
+        _arguments \
+          '--force[запустить еще один экземпляр MATLAB]' \
+          '*:аргументы MATLAB'
         ;;
       *)
         _message 'у этой команды нет обязательных аргументов'

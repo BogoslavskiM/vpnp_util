@@ -49,7 +49,18 @@ is_vpn_service_loaded() {
 }
 
 is_proxy_reachable() {
-  command -v nc >/dev/null 2>&1 && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP@"${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" -sTCP:LISTEN -t 2>/dev/null \
+      | read -r _
+    return
+  fi
+
+  command -v nc >/dev/null 2>&1 \
+    && nc -z -w 1 "$VPN_PROXY_HOST" "$VPN_PROXY_PORT" >/dev/null 2>&1
+}
+
+proxy_check_available() {
+  command -v lsof >/dev/null 2>&1 || command -v nc >/dev/null 2>&1
 }
 
 poll_until() {
@@ -84,13 +95,13 @@ wait_for_vpn_service() {
 }
 
 wait_for_proxy_ready() {
-  if command -v nc >/dev/null 2>&1; then
+  if proxy_check_available; then
     poll_until "Waiting for SOCKS proxy at ${VPN_PROXY_HOST}:${VPN_PROXY_PORT}" "${1:-$VPN_POLL_TIMEOUT}" is_proxy_reachable
   fi
 }
 
 wait_for_proxy_port_free() {
-  if command -v nc >/dev/null 2>&1; then
+  if proxy_check_available; then
     poll_until "Waiting for SOCKS port ${VPN_PROXY_HOST}:${VPN_PROXY_PORT} to be released" "${1:-$VPN_POLL_TIMEOUT}" proxy_port_is_free
   fi
 }
@@ -101,16 +112,103 @@ proxy_port_is_free() {
 
 process_is_running() {
   local process_name="$1"
-  command -v pgrep >/dev/null 2>&1 && pgrep -x "$process_name" >/dev/null 2>&1
+  if command -v pgrep >/dev/null 2>&1 && pgrep -x "$process_name" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -t -c "$process_name" -a -d cwd 2>/dev/null | read -r _
+    return
+  fi
+
+  return 1
+}
+
+process_count() {
+  local process_name="$1"
+  local process_ids=""
+  local count=0
+  local pid
+
+  if command -v pgrep >/dev/null 2>&1; then
+    process_ids="$(pgrep -x "$process_name" 2>/dev/null || true)"
+  fi
+
+  if [[ -z "$process_ids" ]] && command -v lsof >/dev/null 2>&1; then
+    process_ids="$(lsof -t -c "$process_name" -a -d cwd 2>/dev/null | sort -u || true)"
+  fi
+
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] && ((count += 1))
+  done <<< "$process_ids"
+
+  printf '%s\n' "$count"
+}
+
+process_count_exceeds() {
+  local process_name="$1"
+  local previous_count="$2"
+  local current_count
+  current_count="$(process_count "$process_name")"
+  ((current_count > previous_count))
 }
 
 wait_for_process() {
   local process_name="$1"
-  if ! command -v pgrep >/dev/null 2>&1; then
+  if ! command -v pgrep >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
     return 0
   fi
 
   poll_until "Waiting for $process_name to launch" "${2:-$VPN_POLL_TIMEOUT}" process_is_running "$process_name"
+}
+
+wait_for_new_process() {
+  local process_name="$1"
+  local previous_count="$2"
+  if ! command -v pgrep >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
+    return 0
+  fi
+
+  poll_until "Waiting for a new $process_name process" "${3:-$VPN_POLL_TIMEOUT}" \
+    process_count_exceeds "$process_name" "$previous_count"
+}
+
+wait_for_new_process_stable() {
+  local process_name="$1"
+  local previous_count="$2"
+  local label="${3:-$process_name}"
+  local stable_seconds="${4:-5}"
+  local timeout="${5:-$VPN_POLL_TIMEOUT}"
+  local started_at
+  local now
+  local elapsed
+
+  if ! wait_for_new_process "$process_name" "$previous_count" "$timeout"; then
+    return 1
+  fi
+
+  started_at="$(date +%s)"
+  printf 'Waiting for %s to finish launching' "$label" >&2
+  while true; do
+    if ! process_count_exceeds "$process_name" "$previous_count"; then
+      printf ' exited\n' >&2
+      return 1
+    fi
+
+    now="$(date +%s)"
+    elapsed=$((now - started_at))
+    if ((elapsed >= stable_seconds)); then
+      printf ' done\n' >&2
+      return 0
+    fi
+    if ((elapsed >= timeout)); then
+      printf ' timeout\n' >&2
+      return 1
+    fi
+
+    printf '.' >&2
+    sleep "$VPN_POLL_INTERVAL"
+  done
 }
 
 pid_is_running() {
@@ -124,12 +222,45 @@ wait_for_pid() {
   poll_until "Waiting for $label to launch" "${3:-$VPN_POLL_TIMEOUT}" pid_is_running "$pid"
 }
 
+wait_for_pid_stable() {
+  local pid="$1"
+  local label="${2:-process}"
+  local stable_seconds="${3:-2}"
+  local timeout="${4:-$VPN_POLL_TIMEOUT}"
+  local started_at
+  local now
+  local elapsed
+  started_at="$(date +%s)"
+
+  printf 'Waiting for %s to finish launching' "$label" >&2
+  while true; do
+    if ! pid_is_running "$pid"; then
+      printf ' exited\n' >&2
+      return 1
+    fi
+
+    now="$(date +%s)"
+    elapsed=$((now - started_at))
+    if ((elapsed >= stable_seconds)); then
+      printf ' done\n' >&2
+      return 0
+    fi
+    if ((elapsed >= timeout)); then
+      printf ' timeout\n' >&2
+      return 1
+    fi
+
+    printf '.' >&2
+    sleep "$VPN_POLL_INTERVAL"
+  done
+}
+
 check_proxy() {
   if [[ "${SKIP_PROXY_CHECK:-0}" == "1" ]]; then
     return 0
   fi
 
-  if command -v nc >/dev/null 2>&1; then
+  if proxy_check_available; then
     if ! is_proxy_reachable; then
       if [[ -n "$IP_CHECK_URL" ]] \
         && command -v curl >/dev/null 2>&1 \

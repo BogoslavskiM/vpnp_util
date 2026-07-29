@@ -59,7 +59,7 @@ find_app_binary() {
 
 check_proxy
 
-if command -v pgrep >/dev/null 2>&1 && pgrep -x "Google Chrome" >/dev/null 2>&1; then
+if process_is_running "Google Chrome"; then
   echo "Google Chrome is already running." >&2
   echo "Quit Chrome first, then run: vpnp google" >&2
   exit 6
@@ -90,8 +90,8 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/google-vpn.log" 2>&1 &
 
-CHROME_PROCESS_NAME="$(basename "$CHROME_BIN")"
-if ! wait_for_process "$CHROME_PROCESS_NAME"; then
+chrome_pid="$!"
+if ! wait_for_pid_stable "$chrome_pid" "Google Chrome" 5; then
   echo "Google Chrome did not finish launching. Recent log:" >&2
   tail -n 80 "$SCRIPT_DIR/runtime/google-vpn.log" >&2 || true
   exit 7

@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  vpnp up [--force]
+  vpnp up
   vpnp down
   vpnp status
   vpnp ip
@@ -24,7 +24,7 @@ Usage:
   vpnp log [lines]
   vpnp google [browser-args...]
   vpnp yandex [browser-args...]
-  vpnp matlab [matlab-args...]
+  vpnp matlab [--force] [matlab-args...]
   vpnp update-config /path/to/wireguard.conf
   vpnp uninstall
   vpnp help
@@ -113,18 +113,38 @@ load_proxy_shell_config() {
   : "${VPN_PROXY_HOST:=127.0.0.1}"
   : "${VPN_PROXY_PORT:=1080}"
   : "${VPN_TERMINAL_PROXY_URL:=socks5h://${VPN_PROXY_HOST}:${VPN_PROXY_PORT}}"
-  : "${SING_BOX_LAUNCH_LABEL:=local.makar.work-vpn-singbox}"
   : "${NO_PROXY:=localhost,127.0.0.1,::1,.local}"
 }
 
-start_proxy_for_matlab() {
-  load_proxy_shell_config
-
-  if launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
-    "$SCRIPT_DIR/start-work-vpn-proxy.sh" --force
-  else
-    "$SCRIPT_DIR/start-work-vpn-proxy.sh"
+matlab_is_running() {
+  if command -v pgrep >/dev/null 2>&1 && pgrep -x "MATLAB" >/dev/null 2>&1; then
+    return 0
   fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -t -c "MATLAB" -a -d cwd 2>/dev/null | read -r _
+    return
+  fi
+
+  return 1
+}
+
+start_matlab() {
+  local force_start=0
+
+  if [[ "${1:-}" == "--force" ]]; then
+    force_start=1
+    shift
+  fi
+
+  if matlab_is_running && [[ "$force_start" -ne 1 ]]; then
+    echo "MATLAB is already running." >&2
+    echo "Run: vpnp matlab --force" >&2
+    exit 8
+  fi
+
+  "$SCRIPT_DIR/start-work-vpn-proxy.sh"
+  exec "$SCRIPT_DIR/matlab-vpn.sh" "$@"
 }
 
 start_proxy_shell() {
@@ -184,8 +204,7 @@ case "$command" in
     exec "$SCRIPT_DIR/yandex-vpn.sh" "$@"
     ;;
   matlab)
-    start_proxy_for_matlab
-    exec "$SCRIPT_DIR/matlab-vpn.sh" "$@"
+    start_matlab "$@"
     ;;
   update-config|update_config)
     exec "$SCRIPT_DIR/update_config" "$@"

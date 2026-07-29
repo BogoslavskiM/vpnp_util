@@ -61,6 +61,12 @@ find_yandex_binary() {
 
 check_proxy
 
+if process_is_running "Yandex"; then
+  echo "Yandex Browser is already running." >&2
+  echo "Quit Yandex Browser first, then run: vpnp yandex" >&2
+  exit 6
+fi
+
 YANDEX_APP="$(find_yandex_app || true)"
 if [[ -z "$YANDEX_APP" ]]; then
   echo "Yandex Browser app was not found." >&2
@@ -86,8 +92,8 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/yandex-vpn.log" 2>&1 &
 
-YANDEX_PROCESS_NAME="$(basename "$YANDEX_BIN")"
-if ! wait_for_process "$YANDEX_PROCESS_NAME"; then
+yandex_pid="$!"
+if ! wait_for_pid_stable "$yandex_pid" "Yandex Browser" 5; then
   echo "Yandex Browser did not finish launching. Recent log:" >&2
   tail -n 80 "$SCRIPT_DIR/runtime/yandex-vpn.log" >&2 || true
   exit 7
