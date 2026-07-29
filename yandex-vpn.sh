@@ -86,5 +86,12 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/yandex-vpn.log" 2>&1 &
 
+YANDEX_PROCESS_NAME="$(basename "$YANDEX_BIN")"
+if ! wait_for_process "$YANDEX_PROCESS_NAME"; then
+  echo "Yandex Browser did not finish launching. Recent log:" >&2
+  tail -n 80 "$SCRIPT_DIR/runtime/yandex-vpn.log" >&2 || true
+  exit 7
+fi
+
 echo "Yandex Browser started through VPN proxy."
 echo "Profile: default Yandex profile"

@@ -29,6 +29,9 @@ case "$state" in
       update-config)
         _files
         ;;
+      up)
+        _arguments '--force[перезапустить уже загруженный сервис]'
+        ;;
       log)
         _guard '[0-9]#' 'количество строк'
         ;;

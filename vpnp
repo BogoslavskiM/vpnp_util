@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
 usage() {
   cat <<'EOF'
 Usage:
-  vpnp up
+  vpnp up [--force]
   vpnp down
   vpnp status
   vpnp ip
@@ -113,11 +113,22 @@ load_proxy_shell_config() {
   : "${VPN_PROXY_HOST:=127.0.0.1}"
   : "${VPN_PROXY_PORT:=1080}"
   : "${VPN_TERMINAL_PROXY_URL:=socks5h://${VPN_PROXY_HOST}:${VPN_PROXY_PORT}}"
+  : "${SING_BOX_LAUNCH_LABEL:=local.makar.work-vpn-singbox}"
   : "${NO_PROXY:=localhost,127.0.0.1,::1,.local}"
 }
 
+start_proxy_for_matlab() {
+  load_proxy_shell_config
+
+  if launchctl print "gui/$(id -u)/$SING_BOX_LAUNCH_LABEL" >/dev/null 2>&1; then
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh" --force
+  else
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh"
+  fi
+}
+
 start_proxy_shell() {
-  "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+  "$SCRIPT_DIR/start-work-vpn-proxy.sh"
   load_proxy_shell_config
 
   export VPN_MODE="1"
@@ -165,15 +176,15 @@ case "$command" in
     exec tail -n "$lines" "$SCRIPT_DIR/runtime/sing-box-work.log"
     ;;
   google)
-    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh"
     exec "$SCRIPT_DIR/google-vpn.sh" "$@"
     ;;
   yandex)
-    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    "$SCRIPT_DIR/start-work-vpn-proxy.sh"
     exec "$SCRIPT_DIR/yandex-vpn.sh" "$@"
     ;;
   matlab)
-    "$SCRIPT_DIR/start-work-vpn-proxy.sh" >/dev/null
+    start_proxy_for_matlab
     exec "$SCRIPT_DIR/matlab-vpn.sh" "$@"
     ;;
   update-config|update_config)

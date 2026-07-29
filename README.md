@@ -102,10 +102,11 @@ vpnp update-config /path/to/config-directory/
 ## Основные команды
 
 ```zsh
-vpnp up
+vpnp up [--force]
 ```
 
 Поднять локальный SOCKS-прокси через VPN.
+С флагом `--force` перезапустить уже загруженный сервис.
 
 ```zsh
 vpnp down

@@ -138,6 +138,7 @@ if [[ "$#" -eq 0 ]]; then
     echo "Set MATLAB_APP_PATH in vpn.env if MATLAB is installed elsewhere." >&2
     exit 4
   fi
+  MATLAB_PROCESS_NAME="$(basename "$(find_matlab_binary_in_app "$MATLAB_APP" || printf 'MATLAB')")"
 
   open_env_args=(
     --env "VPN_MODE=1"
@@ -161,6 +162,12 @@ if [[ "$#" -eq 0 ]]; then
     "${open_env_args[@]}" \
     "$MATLAB_APP"
 
+  if ! wait_for_process "$MATLAB_PROCESS_NAME"; then
+    echo "MATLAB did not finish launching. Recent log:" >&2
+    tail -n 80 "$SCRIPT_DIR/runtime/matlab-vpn.log" >&2 || true
+    exit 7
+  fi
+
   echo "MATLAB started through VPN proxy."
   echo "Log: $SCRIPT_DIR/runtime/matlab-vpn.log"
 elif [[ "${MATLAB_BACKGROUND:-0}" == "1" ]]; then
@@ -172,6 +179,13 @@ elif [[ "${MATLAB_BACKGROUND:-0}" == "1" ]]; then
   fi
 
   "$MATLAB_BIN" "$@" > "$SCRIPT_DIR/runtime/matlab-vpn.log" 2>&1 &
+  matlab_pid="$!"
+  if ! wait_for_pid "$matlab_pid" "MATLAB"; then
+    echo "MATLAB did not finish launching. Recent log:" >&2
+    tail -n 80 "$SCRIPT_DIR/runtime/matlab-vpn.log" >&2 || true
+    exit 7
+  fi
+
   echo "MATLAB started through VPN proxy."
   echo "Log: $SCRIPT_DIR/runtime/matlab-vpn.log"
 else

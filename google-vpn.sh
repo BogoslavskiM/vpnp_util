@@ -90,5 +90,12 @@ mkdir -p "$SCRIPT_DIR/runtime"
   "$@" \
   > "$SCRIPT_DIR/runtime/google-vpn.log" 2>&1 &
 
+CHROME_PROCESS_NAME="$(basename "$CHROME_BIN")"
+if ! wait_for_process "$CHROME_PROCESS_NAME"; then
+  echo "Google Chrome did not finish launching. Recent log:" >&2
+  tail -n 80 "$SCRIPT_DIR/runtime/google-vpn.log" >&2 || true
+  exit 7
+fi
+
 echo "Google Chrome started through VPN proxy."
 echo "Profile: default Chrome profile picker"
