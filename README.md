@@ -19,6 +19,7 @@ vpnp update-config /path/to/wireguard.conf
 ```zsh
 vpnp google
 vpnp yandex
+vpnp matlab
 vpnp shell
 ```
 
@@ -131,6 +132,31 @@ vpnp yandex
 Открыть Yandex Browser через VPN-прокси с обычным профилем.
 
 ```zsh
+vpnp matlab
+```
+
+Открыть MATLAB как обычное macOS-приложение через VPN-прокси. Без аргументов MATLAB запускается через `.app` и пишет лог в `runtime/matlab-vpn.log`.
+
+Если MATLAB установлен нестандартно, задайте в `vpn.env` один из путей:
+
+```zsh
+MATLAB_APP_PATH="/Applications/MATLAB_R2024b.app"
+MATLAB_BIN_PATH="/Applications/MATLAB_R2024b.app/bin/matlab"
+```
+
+Для batch-запуска можно передать аргументы MATLAB:
+
+```zsh
+vpnp matlab -batch "disp(webread('https://example.com'))"
+```
+
+По умолчанию команда не выставляет `JAVA_TOOL_OPTIONS`. Если для отдельного случая нужен Java-прокси, его можно включить явно:
+
+```zsh
+MATLAB_JAVA_PROXY=1 vpnp matlab
+```
+
+```zsh
 vpnp shell
 ```
 
@@ -182,7 +208,8 @@ socks5://127.0.0.1:1080
 ```
 
 5. Браузерные команды (`vpnp google`, `vpnp yandex`) запускают браузер с proxy-флагами.
-6. `vpnp shell` открывает shell с proxy-переменными окружения.
+6. `vpnp matlab` запускает MATLAB с proxy-переменными окружения. Обычный GUI-запуск идет через `.app`.
+7. `vpnp shell` открывает shell с proxy-переменными окружения.
 
 ## Локальные файлы
 
